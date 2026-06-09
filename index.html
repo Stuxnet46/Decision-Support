@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>DSS — Decision Support System</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #1A5C38;
+    --green-mid: #2E7D4F;
+    --green-light: #E8F5EE;
+    --green-pale: #F0FAF4;
+    --green-border: #C8E6D4;
+    --green-accent: #00A651;
+    --success: #1A5C38;
+    --warning: #D97706;
+    --danger: #DC2626;
+    --bg: #F0FAF4;
+    --card: #FFFFFF;
+    --text: #0D2B1A;
+    --text-muted: #5A7A68;
+    --border: #C8E6D4;
+    --shadow: 0 2px 12px rgba(26,92,56,0.08);
+    --radius: 14px;
+    --nav-h: 64px;
+    --header-h: 40px;
+  }
+  .dark {
+    --bg: #0A1F12;
+    --card: #112318;
+    --text: #E8F5EE;
+    --text-muted: #7AAF8A;
+    --border: #1E3D28;
+    --green-pale: #0D2B1A;
+    --green-light: #1A3D26;
+    --shadow: 0 2px 12px rgba(0,0,0,0.3);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; transition: background 0.3s, color 0.3s;
+  }
+
+  /* ── PIN SCREEN ── */
+  #pin-screen {
+    position: fixed; inset: 0; z-index: 999;
+    background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .pin-card {
+    background: var(--card); border-radius: 24px;
+    padding: 32px 24px 28px; width: 100%; max-width: 340px;
+    box-shadow: 0 8px 32px rgba(26,92,56,0.12);
+    display: flex; flex-direction: column; align-items: center;
+    border: 1px solid var(--border);
+  }
+  .pin-logo {
+    width: 68px; height: 68px; border-radius: 16px;
+    background: var(--green);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 22px; color: #fff;
+    margin-bottom: 14px;
+    box-shadow: 0 4px 16px rgba(26,92,56,0.25);
+  }
+  .pin-label {
+    font-size: 10px; letter-spacing: 2px; color: var(--green);
+    border: 1.5px solid var(--green-border); border-radius: 20px;
+    padding: 4px 12px; margin-bottom: 10px; font-weight: 700;
+  }
+  .pin-title { font-weight: 800; font-size: 22px; color: var(--text); margin-bottom: 4px; }
+  .pin-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 22px; text-align: center; }
+  .pin-subtitle b { color: var(--green); }
+  .pin-dots { display: flex; gap: 8px; margin-bottom: 24px; }
+  .pin-dot {
+    width: 36px; height: 36px; border-radius: 8px;
+    border: 2px solid var(--border); background: var(--bg);
+    transition: all 0.2s;
+  }
+  .pin-dot.filled { background: var(--green); border-color: var(--green); }
+  .pin-dot.error { background: var(--danger); border-color: var(--danger); animation: shake 0.4s; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+  .pin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
+  .pin-btn {
+    background: var(--green-light); border: none; border-radius: 10px;
+    height: 56px; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 20px;
+    color: var(--text); cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pin-btn:active { transform: scale(0.93); background: var(--green-border); }
+  .pin-btn.del { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+  .pin-btn.empty { background: transparent; pointer-events: none; }
+  .pin-error-msg { font-size: 12px; color: var(--danger); margin-top: 10px; min-height: 16px; text-align: center; font-weight: 500; }
+  .pin-footer { margin-top: 18px; font-size: 11px; color: var(--text-muted); text-align: center; }
+
+  /* ── MARQUEE ── */
+  .marquee-bar {
+    background: var(--green); height: var(--header-h);
+    display: flex; align-items: center; overflow: hidden;
+    position: sticky; top: 0; z-index: 100; width: 100%;
+  }
+  .marquee-track {
+    display: flex; white-space: nowrap;
+    animation: marquee 30s linear infinite; flex-shrink: 0;
+  }
+  .marquee-track span {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 2px; color: #AADFC0; padding: 0 24px;
+    text-transform: uppercase; flex-shrink: 0;
+  }
+  .marquee-track span.dot { color: rgba(255,255,255,0.5); padding: 0 6px; letter-spacing: 0; }
+  @keyframes marquee { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+  /* ── APP HEADER ── */
+  .app-header {
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: var(--header-h); z-index: 99; width: 100%;
+  }
+  .app-logo { display: flex; align-items: center; gap: 10px; }
+  .logo-box {
+    width: 38px; height: 38px; border-radius: 10px; background: var(--green);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 12px; color: #fff; flex-shrink: 0;
+  }
+  .logo-name { font-weight: 800; font-size: 15px; color: var(--text); line-height: 1.2; }
+  .logo-sub { font-size: 9px; color: var(--text-muted); letter-spacing: 0.8px; font-weight: 600; text-transform: uppercase; }
+  .theme-btn {
+    width: 34px; height: 34px; border-radius: 8px; border: 1.5px solid var(--border);
+    background: var(--bg); cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 15px; transition: all 0.2s; flex-shrink: 0;
+  }
+  .lock-btn {
+    width: 34px; height: 34px; border-radius: 8px; border: 1.5px solid #FECACA;
+    background: #FEF2F2; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 15px; transition: all 0.2s; flex-shrink: 0;
+  }
+  .lock-btn:active { background: #FEE2E2; transform: scale(0.9); }
+  .dark .lock-btn { background: #3A0808; border-color: #7F1D1D; }
+
+  /* ── MAIN ── */
+  .main {
+    padding: 14px 14px calc(var(--nav-h) + 14px);
+    width: 100%; max-width: 480px; margin: 0 auto;
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--card); border-radius: var(--radius);
+    border: 1px solid var(--border); padding: 16px;
+    box-shadow: var(--shadow); margin-bottom: 10px; width: 100%;
+  }
+  .card-title {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.8px;
+    color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px;
+  }
+
+  /* ── INPUT ── */
+  .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+  .input-group { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .input-group label { font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; }
+  .input-group input {
+    width: 100%; padding: 10px 8px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--green-pale);
+    font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 20px;
+    color: var(--text); outline: none; transition: border 0.2s;
+    text-align: center; min-width: 0;
+  }
+  .input-group input:focus { border-color: var(--green); background: var(--card); }
+
+  /* ── PROGRESS ── */
+  .progress-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .progress-pct { font-weight: 800; font-size: 22px; color: var(--green); }
+  .status-badge {
+    padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.3px; flex-shrink: 0;
+  }
+  .status-badge.on-track { background: var(--green-light); color: var(--green); }
+  .status-badge.warning { background: #FEF3C7; color: #D97706; }
+  .status-badge.critical { background: #FEE2E2; color: #DC2626; }
+  .dark .status-badge.on-track { background: #1A3D26; color: #6FCF97; }
+  .dark .status-badge.warning { background: #3A2800; color: #FCD34D; }
+  .dark .status-badge.critical { background: #3A0808; color: #F87171; }
+  .progress-bar-bg { height: 10px; border-radius: 99px; background: var(--green-light); overflow: hidden; width: 100%; }
+  .progress-bar-fill {
+    height: 100%; border-radius: 99px; background: var(--green);
+    transition: width 0.6s cubic-bezier(.4,0,.2,1); position: relative; overflow: hidden;
+  }
+  .progress-bar-fill::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+    animation: shimmer 2.5s infinite;
+  }
+  @keyframes shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+
+  /* ── STATS GRID ── */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; width: 100%; }
+  .stat-box {
+    background: var(--green-pale); border-radius: 12px;
+    padding: 12px; border: 1px solid var(--green-border);
+    min-width: 0;
+  }
+  .stat-box.accent { background: var(--green); border-color: var(--green); }
+  .stat-box.accent .stat-label { color: rgba(255,255,255,0.7); }
+  .stat-box.accent .stat-value { color: #fff; }
+  .stat-box.accent .stat-sub { color: rgba(255,255,255,0.6); }
+  .stat-label { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+  .stat-value { font-weight: 800; font-size: 26px; color: var(--text); line-height: 1; }
+  .stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  /* ── TARGET HARI INI ── */
+  .target-hari {
+    background: var(--green); border-radius: var(--radius);
+    padding: 16px; margin-bottom: 10px; width: 100%;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 4px 16px rgba(26,92,56,0.2);
+  }
+  .target-hari-label { font-size: 9px; font-weight: 700; letter-spacing: 1.8px; color: rgba(255,255,255,0.65); text-transform: uppercase; margin-bottom: 4px; }
+  .target-hari-value { font-weight: 800; font-size: 40px; color: #fff; line-height: 1; }
+  .target-hari-sub { font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+  .target-hari-right { text-align: right; flex-shrink: 0; }
+  .hari-info-label { font-size: 10px; color: rgba(255,255,255,0.55); }
+  .hari-info-val { font-weight: 800; font-size: 20px; color: #fff; }
+
+  /* ── LIBUR BTN ── */
+  .libur-btn {
+    width: 100%; padding: 13px 16px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--card);
+    font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 600; font-size: 14px;
+    color: var(--text-muted); cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-bottom: 10px;
+  }
+  .libur-btn.active { background: #FEE2E2; border-color: #DC2626; color: #DC2626; }
+  .dark .libur-btn.active { background: #3A0808; }
+
+  /* ── CALENDAR ── */
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; width: 100%; }
+  .cal-day-header { text-align: center; font-size: 9px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; padding: 4px 0; }
+  .cal-day {
+    aspect-ratio: 1; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 500; color: var(--text-muted); cursor: default;
+  }
+  .cal-day.work { background: var(--green-pale); color: var(--text); font-weight: 600; border: 1px solid var(--green-border); }
+  .cal-day.today { background: var(--green); color: #fff; font-weight: 800; box-shadow: 0 2px 8px rgba(26,92,56,0.3); }
+  .cal-day.holiday { background: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; }
+  .dark .cal-day.holiday { background: #3A0808; border-color: #7F1D1D; }
+  .cal-day.past { opacity: 0.45; }
+  .cal-legend { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text-muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+  /* ── SIMULASI ── */
+  .sim-card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); padding: 16px; margin-bottom: 10px; width: 100%; }
+  .sim-title { font-weight: 700; font-size: 14px; color: var(--text); margin-bottom: 10px; }
+  .sim-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; width: 100%; }
+  .sim-label { font-size: 13px; font-weight: 600; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+  .sim-input {
+    flex: 1; padding: 10px; border-radius: 10px; border: 1.5px solid var(--border);
+    background: var(--green-pale); font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800; font-size: 18px; color: var(--text); outline: none; text-align: center;
+    min-width: 0;
+  }
+  .sim-input:focus { border-color: var(--green); }
+  .sim-result {
+    background: var(--green-pale); border-radius: 10px; padding: 12px;
+    border: 1px solid var(--green-border); font-size: 13px; color: var(--text-muted); line-height: 1.7;
+  }
+  .sim-result b { color: var(--green); }
+
+  /* ── SETTINGS ── */
+  .settings-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0; border-bottom: 1px solid var(--border); gap: 10px;
+  }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-label { font-size: 14px; font-weight: 600; color: var(--text); }
+  .settings-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .s-btn {
+    padding: 7px 14px; border-radius: 8px; border: 1.5px solid var(--green);
+    background: transparent; color: var(--green); font-weight: 700; font-size: 12px;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap; flex-shrink: 0;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+  .s-btn:active { background: var(--green); color: #fff; }
+  .s-btn.danger { border-color: var(--danger); color: var(--danger); }
+  .s-btn.danger:active { background: var(--danger); color: #fff; }
+
+  /* ── NAVBAR ── */
+  .navbar {
+    position: fixed; bottom: 0; left: 0; right: 0; height: var(--nav-h);
+    background: var(--card); border-top: 1px solid var(--border);
+    display: flex; align-items: center; z-index: 100;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.06); width: 100%;
+  }
+  .nav-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 8px 4px; cursor: pointer; transition: all 0.15s; min-width: 0;
+  }
+  .nav-item svg { width: 22px; height: 22px; stroke: var(--text-muted); transition: stroke 0.2s; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-item.active svg { stroke: var(--green); }
+  .nav-label { font-size: 10px; color: var(--text-muted); font-weight: 600; transition: color 0.2s; }
+  .nav-item.active .nav-label { color: var(--green); font-weight: 700; }
+  .nav-item:active { transform: scale(0.9); }
+
+  /* ── PAGES ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── FOOTER ── */
+  .footer-bar { text-align: center; padding: 8px 16px calc(var(--nav-h) + 8px); font-size: 11px; color: var(--text-muted); }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: calc(var(--nav-h) + 10px); left: 50%;
+    transform: translateX(-50%) translateY(16px);
+    background: var(--green); color: #fff; padding: 9px 18px; border-radius: 20px;
+    font-size: 13px; font-weight: 600; opacity: 0; transition: all 0.3s; z-index: 200;
+    white-space: nowrap; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-key { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+  .summary-val { font-size: 14px; font-weight: 700; color: var(--text); }
+  .summary-val.accent { color: var(--green); }
+</style>
+</head>
+<body>
+
+<!-- PIN -->
+<div id="pin-screen">
+  <div class="pin-card">
+    <div class="pin-logo">DSS</div>
+    <div class="pin-label">ACCESS CONTROL SYSTEM</div>
+    <div class="pin-title">Decision Support</div>
+    <div class="pin-subtitle">Masukkan <b>PIN 6 digit</b> untuk akses</div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div>
+      <div class="pin-dot" id="d4"></div><div class="pin-dot" id="d5"></div>
+    </div>
+    <div class="pin-grid">
+      <button class="pin-btn" onclick="pinPress('1')">1</button>
+      <button class="pin-btn" onclick="pinPress('2')">2</button>
+      <button class="pin-btn" onclick="pinPress('3')">3</button>
+      <button class="pin-btn" onclick="pinPress('4')">4</button>
+      <button class="pin-btn" onclick="pinPress('5')">5</button>
+      <button class="pin-btn" onclick="pinPress('6')">6</button>
+      <button class="pin-btn" onclick="pinPress('7')">7</button>
+      <button class="pin-btn" onclick="pinPress('8')">8</button>
+      <button class="pin-btn" onclick="pinPress('9')">9</button>
+      <button class="pin-btn empty"></button>
+      <button class="pin-btn" onclick="pinPress('0')">0</button>
+      <button class="pin-btn del" onclick="pinDel()">⌫ Hapus</button>
+    </div>
+    <div class="pin-error-msg" id="pin-error"></div>
+    <div class="pin-footer">© Gentara Anugrah · DSS</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+
+  <!-- MARQUEE -->
+  <div class="marquee-bar">
+    <div class="marquee-track">
+      <span>DECISION SUPPORT SYSTEM</span><span class="dot">·</span>
+      <span>Sistem Pendukung Keputusan Berbasis Data untuk Optimalisasi Kinerja Jaringan Agen</span><span class="dot">·</span>
+      <span>GENTARA ANUGRAH</span><span class="dot">·</span>
+      <span>DECISION SUPPORT SYSTEM</span><span class="dot">·</span>
+      <span>Sistem Pendukung Keputusan Berbasis Data untuk Optimalisasi Kinerja Jaringan Agen</span><span class="dot">·</span>
+      <span>GENTARA ANUGRAH</span><span class="dot">·</span>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <div class="app-header">
+    <div class="app-logo">
+      <div class="logo-box">DSS</div>
+      <div>
+        <div class="logo-name">Decision Support</div>
+        <div class="logo-sub">Monitoring Reaktivasi Agen</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">🌙</button>
+      <button class="lock-btn" onclick="lockSystem()" title="Kunci Sistem">🔒</button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <div class="main">
+      <div class="card">
+        <div class="card-title">Input Data</div>
+        <div class="input-row">
+          <div class="input-group">
+            <label>Target Agen</label>
+            <input type="number" id="inp-target" placeholder="0" oninput="calculate()" inputmode="numeric">
+          </div>
+          <div class="input-group">
+            <label>Posisi Saat Ini</label>
+            <input type="number" id="inp-posisi" placeholder="0" oninput="calculate()" inputmode="numeric">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Progress Pencapaian</div>
+        <div class="progress-header">
+          <div class="progress-pct" id="pct-text">0.00%</div>
+          <div class="status-badge on-track" id="status-badge">— Mulai Input</div>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-box accent">
+          <div class="stat-label">Gap Aktivasi</div>
+          <div class="stat-value" id="stat-gap">0</div>
+          <div class="stat-sub">agen tersisa</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Sisa Hari Kerja</div>
+          <div class="stat-value" id="stat-hk">0</div>
+          <div class="stat-sub">hari efektif</div>
+        </div>
+      </div>
+
+      <div class="target-hari">
+        <div>
+          <div class="target-hari-label">Target Aktivasi Hari Ini</div>
+          <div class="target-hari-value" id="target-hari">0</div>
+          <div class="target-hari-sub">agen / hari kerja</div>
+        </div>
+        <div class="target-hari-right">
+          <div class="hari-info-label">Hari ke-</div>
+          <div class="hari-info-val" id="hari-ke">—</div>
+          <div class="hari-info-label" id="tgl-today" style="margin-top:4px;font-size:11px"></div>
+        </div>
+      </div>
+
+      <button class="libur-btn" id="libur-btn" onclick="toggleLibur()">
+        <span id="libur-icon">📅</span>
+        <span id="libur-text">Tandai Hari Ini Libur</span>
+      </button>
+    </div>
+    <div class="footer-bar">© Gentara Anugrah All Rights Reserved 2026</div>
+  </div>
+
+  <!-- KALENDER -->
+  <div class="page" id="page-kalender">
+    <div class="main">
+      <div class="card">
+        <div class="card-title" id="cal-month-title">Kalender Bulan Ini</div>
+        <div class="cal-grid" id="cal-grid"></div>
+        <div class="cal-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Hari Ini</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green-pale);border:1px solid var(--green-border)"></div>Hari Kerja</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#FEE2E2;border:1px solid #FECACA"></div>Libur</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--border)"></div>Weekend</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Ringkasan Kalender</div>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-label">Total Hari Kerja</div>
+            <div class="stat-value" id="cal-total-hk">0</div>
+            <div class="stat-sub">bulan ini</div>
+          </div>
+          <div class="stat-box accent">
+            <div class="stat-label">Sisa Efektif</div>
+            <div class="stat-value" id="cal-sisa-hk">0</div>
+            <div class="stat-sub">hari tersisa</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:var(--text-muted);line-height:1.7" id="cal-libur-list"></div>
+      </div>
+    </div>
+    <div class="footer-bar">© Gentara Anugrah All Rights Reserved 2026</div>
+  </div>
+
+  <!-- SIMULASI -->
+  <div class="page" id="page-simulasi">
+    <div class="main">
+      <div class="sim-card">
+        <div class="sim-title">🔮 Simulasi What-If</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.6">Berapa agen yang bisa Anda reaktivasi per hari? Sistem akan menghitung kapan target tercapai.</div>
+        <div class="sim-row">
+          <div class="sim-label">Reaktivasi</div>
+          <input type="number" class="sim-input" id="sim-per-hari" placeholder="0" oninput="simulasi()" inputmode="numeric">
+          <div class="sim-label">agen/hari</div>
+        </div>
+        <div class="sim-result" id="sim-result">Masukkan angka untuk melihat proyeksi pencapaian target.</div>
+      </div>
+      <div class="sim-card">
+        <div class="sim-title">📊 Ringkasan Monitoring</div>
+        <div id="sim-summary"></div>
+      </div>
+    </div>
+    <div class="footer-bar">© Gentara Anugrah All Rights Reserved 2026</div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="page" id="page-settings">
+    <div class="main">
+      <div class="card">
+        <div class="card-title">Data & Penyimpanan</div>
+        <div class="settings-row">
+          <div><div class="settings-label">Export Data</div><div class="settings-sub">Simpan data ke file JSON</div></div>
+          <button class="s-btn" onclick="exportData()">Export</button>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">Import Data</div><div class="settings-sub">Muat data dari file JSON</div></div>
+          <button class="s-btn" onclick="document.getElementById('import-file').click()">Import</button>
+          <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">Reset Data</div><div class="settings-sub">Hapus semua data tersimpan</div></div>
+          <button class="s-btn danger" onclick="resetData()">Reset</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Informasi Sistem</div>
+        <div class="settings-row">
+          <div><div class="settings-label">Versi</div><div class="settings-sub">Decision Support System</div></div>
+          <div style="font-size:13px;color:var(--text-muted);font-weight:700">v1.1.0</div>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">Terakhir Diperbarui</div><div class="settings-sub" id="last-update">—</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Keamanan</div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Kunci Sistem</div>
+            <div class="settings-sub">Keluar dan kembali ke PIN screen</div>
+          </div>
+          <button class="s-btn danger" onclick="lockSystem()">🔒 Kunci</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Tentang</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.7">
+          <b style="color:var(--text)">Decision Support System</b><br>
+          Sistem Pendukung Keputusan Berbasis Data untuk Optimalisasi Kinerja Jaringan Agen.<br><br>
+          © Gentara Anugrah All Rights Reserved 2026
+        </div>
+      </div>
+    </div>
+    <div class="footer-bar">© Gentara Anugrah All Rights Reserved 2026</div>
+  </div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <div class="nav-label">Dashboard</div>
+    </div>
+    <div class="nav-item" id="nav-kalender" onclick="showPage('kalender')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <div class="nav-label">Kalender</div>
+    </div>
+    <div class="nav-item" id="nav-simulasi" onclick="showPage('simulasi')">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <div class="nav-label">Simulasi</div>
+    </div>
+    <div class="nav-item" id="nav-settings" onclick="showPage('settings')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <div class="nav-label">Pengaturan</div>
+    </div>
+  </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PIN = '700115';
+let pinInput = '', pinAttempts = 0, pinLocked = false, lockTimer = null, isDark = false;
+let data = { target: 0, posisi: 0, holidays: [], lastUpdate: null };
+
+function saveData() {
+  data.lastUpdate = new Date().toISOString();
+  localStorage.setItem('dss_data', JSON.stringify(data));
+  localStorage.setItem('dss_theme', isDark ? 'dark' : 'light');
+}
+function loadData() {
+  try { const r = localStorage.getItem('dss_data'); if (r) data = {...data, ...JSON.parse(r)}; } catch(e){}
+  isDark = localStorage.getItem('dss_theme') === 'dark';
+  if (isDark) { document.body.classList.add('dark'); document.getElementById('theme-btn').textContent = '☀️'; }
+}
+
+function pinPress(n) {
+  if (pinLocked || pinInput.length >= 6) return;
+  pinInput += n;
+  updateDots();
+  if (pinInput.length === 6) setTimeout(checkPin, 150);
+}
+function pinDel() {
+  if (pinLocked) return;
+  pinInput = pinInput.slice(0,-1);
+  updateDots();
+  document.getElementById('pin-error').textContent = '';
+}
+function updateDots() {
+  for (let i=0;i<6;i++) {
+    const d = document.getElementById('d'+i);
+    d.classList.toggle('filled', i < pinInput.length);
+    d.classList.remove('error');
+  }
+}
+function checkPin() {
+  if (pinInput === PIN) {
+    document.getElementById('pin-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadData(); initApp();
+  } else {
+    pinAttempts++;
+    for (let i=0;i<6;i++) document.getElementById('d'+i).classList.add('error');
+    if (pinAttempts >= 3) {
+      pinLocked = true;
+      let s = 30;
+      document.getElementById('pin-error').innerHTML = `<span style="color:var(--danger);font-weight:600">🔒 Terkunci ${s} detik</span>`;
+      lockTimer = setInterval(() => {
+        s--;
+        if (s <= 0) { clearInterval(lockTimer); pinLocked = false; pinAttempts = 0; document.getElementById('pin-error').textContent = ''; }
+        else document.getElementById('pin-error').innerHTML = `<span style="color:var(--danger);font-weight:600">🔒 Terkunci ${s} detik</span>`;
+      }, 1000);
+    } else {
+      document.getElementById('pin-error').textContent = `PIN salah. Sisa ${3-pinAttempts}x percobaan.`;
+    }
+    setTimeout(() => { pinInput = ''; updateDots(); }, 500);
+  }
+}
+
+function lockSystem() {
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('pin-screen').style.display = 'flex';
+  pinInput = ''; pinAttempts = 0; pinLocked = false;
+  if (lockTimer) clearInterval(lockTimer);
+  updateDots();
+  document.getElementById('pin-error').textContent = '';
+  showPage('dashboard');
+}
+
+function toggleTheme() {
+  isDark = !isDark;
+  document.body.classList.toggle('dark', isDark);
+  document.getElementById('theme-btn').textContent = isDark ? '☀️' : '🌙';
+  saveData();
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+  if (name === 'kalender') renderCalendar();
+  if (name === 'simulasi') renderSimulasi();
+}
+
+function dateStr(y,m,d) { return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
+function getToday() { const d=new Date(); return dateStr(d.getFullYear(),d.getMonth(),d.getDate()); }
+function isWeekend(y,m,d) { const day=new Date(y,m,d).getDay(); return day===0||day===6; }
+function getDaysInMonth(y,m) { return new Date(y,m+1,0).getDate(); }
+function isWorkDay(y,m,d) { return !isWeekend(y,m,d) && !data.holidays.includes(dateStr(y,m,d)); }
+
+function getSisaHK() {
+  const t=new Date(), y=t.getFullYear(), mo=t.getMonth(), d=t.getDate();
+  let c=0;
+  for (let i=d;i<=getDaysInMonth(y,mo);i++) if(isWorkDay(y,mo,i)) c++;
+  return c;
+}
+function getTotalHK() {
+  const t=new Date(), y=t.getFullYear(), mo=t.getMonth();
+  let c=0;
+  for (let i=1;i<=getDaysInMonth(y,mo);i++) if(isWorkDay(y,mo,i)) c++;
+  return c;
+}
+function getHariKe() {
+  const t=new Date(), y=t.getFullYear(), mo=t.getMonth(), d=t.getDate();
+  let c=0;
+  for (let i=1;i<=d;i++) if(isWorkDay(y,mo,i)) c++;
+  return c;
+}
+function getTargetKum() {
+  const totalHK=getTotalHK();
+  if (!totalHK||!data.target) return 0;
+  return Math.round((data.target/totalHK)*getHariKe());
+}
+
+function toggleLibur() {
+  const today=getToday(), idx=data.holidays.indexOf(today);
+  if (idx>=0) { data.holidays.splice(idx,1); showToast('✅ Hari ini kembali hari kerja'); }
+  else { data.holidays.push(today); showToast('🔴 Hari ini ditandai libur'); }
+  saveData(); calculate(); renderCalendar();
+}
+function updateLiburBtn() {
+  const isLibur=data.holidays.includes(getToday());
+  document.getElementById('libur-btn').classList.toggle('active',isLibur);
+  document.getElementById('libur-icon').textContent = isLibur ? '🔴' : '📅';
+  document.getElementById('libur-text').textContent = isLibur ? 'Batalkan Tandai Libur' : 'Tandai Hari Ini Libur';
+}
+
+function calculate() {
+  data.target = parseInt(document.getElementById('inp-target').value)||0;
+  data.posisi = parseInt(document.getElementById('inp-posisi').value)||0;
+  saveData();
+  const gap=Math.max(0,data.target-data.posisi);
+  const sisaHK=getSisaHK();
+  const targetHari=sisaHK>0?Math.ceil(gap/sisaHK):0;
+  const pct=data.target>0?Math.min(100,(data.posisi/data.target)*100):0;
+
+  document.getElementById('stat-gap').textContent=gap;
+  document.getElementById('stat-hk').textContent=sisaHK;
+  document.getElementById('target-hari').textContent=targetHari;
+  document.getElementById('pct-text').textContent=pct.toFixed(2)+'%';
+  document.getElementById('progress-fill').style.width=Math.min(100,pct)+'%';
+
+  const tKum=getTargetKum();
+  const badge=document.getElementById('status-badge');
+  if (!data.target) { badge.className='status-badge on-track'; badge.textContent='— Mulai Input'; }
+  else if (data.posisi>=tKum) { badge.className='status-badge on-track'; badge.textContent='🟢 On Track'; }
+  else if (data.posisi>=tKum*0.9) { badge.className='status-badge warning'; badge.textContent='🟡 Perlu Perhatian'; }
+  else { badge.className='status-badge critical'; badge.textContent='🔴 Kritis'; }
+
+  const hk=getHariKe();
+  document.getElementById('hari-ke').textContent=hk||'—';
+  const mn=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  const now=new Date();
+  document.getElementById('tgl-today').textContent=now.getDate()+' '+mn[now.getMonth()]+' '+now.getFullYear();
+  updateLiburBtn();
+}
+
+function renderCalendar() {
+  const t=new Date(), y=t.getFullYear(), mo=t.getMonth();
+  const total=getDaysInMonth(y,mo), firstDay=new Date(y,mo,1).getDay();
+  const mns=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  document.getElementById('cal-month-title').textContent='Kalender '+mns[mo]+' '+y;
+  const grid=document.getElementById('cal-grid');
+  grid.innerHTML='';
+  ['Min','Sen','Sel','Rab','Kam','Jum','Sab'].forEach(h=>{
+    const el=document.createElement('div'); el.className='cal-day-header'; el.textContent=h; grid.appendChild(el);
+  });
+  for (let i=0;i<firstDay;i++) { const el=document.createElement('div'); el.className='cal-day'; grid.appendChild(el); }
+  const todayStr=getToday();
+  for (let d=1;d<=total;d++) {
+    const ds=dateStr(y,mo,d);
+    const el=document.createElement('div');
+    el.textContent=d;
+    const isPast=new Date(y,mo,d)<new Date(t.getFullYear(),t.getMonth(),t.getDate());
+    if (ds===todayStr) el.className='cal-day today';
+    else if (data.holidays.includes(ds)) el.className='cal-day holiday'+(isPast?' past':'');
+    else if (isWeekend(y,mo,d)) el.className='cal-day'+(isPast?' past':'');
+    else el.className='cal-day work'+(isPast?' past':'');
+    grid.appendChild(el);
+  }
+  document.getElementById('cal-total-hk').textContent=getTotalHK();
+  document.getElementById('cal-sisa-hk').textContent=getSisaHK();
+  const liburList=data.holidays.filter(h=>h.startsWith(y+'-'+String(mo+1).padStart(2,'0')));
+  const mnsS=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  document.getElementById('cal-libur-list').innerHTML = liburList.length
+    ? '📌 <b>Hari libur ditandai:</b> '+liburList.map(h=>{const p=h.split('-');return p[2]+' '+mnsS[parseInt(p[1])-1];}).join(', ')
+    : '📌 Belum ada hari libur yang ditandai.';
+}
+
+function renderSimulasi() {
+  simulasi();
+  const gap=Math.max(0,data.target-data.posisi);
+  const pct=data.target>0?((data.posisi/data.target)*100).toFixed(2):0;
+  const sisaHK=getSisaHK();
+  const tHari=sisaHK>0?Math.ceil(gap/sisaHK):0;
+  document.getElementById('sim-summary').innerHTML=`
+    <div class="summary-row"><span class="summary-key">Target Bulan Ini</span><span class="summary-val">${data.target} agen</span></div>
+    <div class="summary-row"><span class="summary-key">Posisi Saat Ini</span><span class="summary-val">${data.posisi} agen</span></div>
+    <div class="summary-row"><span class="summary-key">Gap Aktivasi</span><span class="summary-val accent">${gap} agen</span></div>
+    <div class="summary-row"><span class="summary-key">Progress</span><span class="summary-val">${pct}%</span></div>
+    <div class="summary-row"><span class="summary-key">Target Hari Ini</span><span class="summary-val accent">${tHari} agen/hari</span></div>`;
+}
+
+function simulasi() {
+  const perHari=parseInt(document.getElementById('sim-per-hari').value)||0;
+  const gap=Math.max(0,data.target-data.posisi);
+  const res=document.getElementById('sim-result');
+  if (!perHari||!gap||!data.target) { res.innerHTML='Masukkan angka untuk melihat proyeksi pencapaian target.'; return; }
+  const hariDibutuhkan=Math.ceil(gap/perHari);
+  const today=new Date();
+  let hkCount=0;
+  let tanggal=new Date(today);
+  for (let i=0;hkCount<hariDibutuhkan;i++) {
+    const d=new Date(today); d.setDate(today.getDate()+i);
+    const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    if (d.getDay()!==0&&d.getDay()!==6&&!data.holidays.includes(ds)) { hkCount++; tanggal=new Date(d); }
+    if (i>365) break;
+  }
+  const mn=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const tglStr=tanggal.getDate()+' '+mn[tanggal.getMonth()]+' '+tanggal.getFullYear();
+  const sisaHK=getSisaHK();
+  const cukup=perHari>=Math.ceil(gap/sisaHK);
+  res.innerHTML=`Dengan reaktivasi <b>${perHari} agen/hari</b>, gap <b>${gap} agen</b> tertutup dalam <b>${hariDibutuhkan} hari kerja</b>.<br><br>📅 Estimasi target tercapai: <b>${tglStr}</b><br><br>${cukup?'✅ <b style="color:var(--success)">Pace ini cukup</b> untuk mencapai target bulan ini.':`⚠️ <b style="color:var(--danger)">Perlu ditingkatkan.</b> Target minimal: <b>${Math.ceil(gap/sisaHK)} agen/hari</b>.`}`;
+}
+
+function exportData() {
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const now=new Date();
+  a.href=url; a.download='dss-'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'.json';
+  a.click(); URL.revokeObjectURL(url); showToast('✅ Data berhasil diekspor');
+}
+function importData(e) {
+  const file=e.target.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try { data={...data,...JSON.parse(ev.target.result)}; saveData(); initApp(); showToast('✅ Data berhasil diimpor'); }
+    catch(err){ showToast('❌ File tidak valid'); }
+  };
+  r.readAsText(file); e.target.value='';
+}
+function resetData() {
+  if(confirm('Reset semua data? Tidak dapat dibatalkan.')) {
+    data={target:0,posisi:0,holidays:[],lastUpdate:null}; saveData(); initApp(); showToast('🔄 Data direset');
+  }
+}
+
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+function initApp() {
+  document.getElementById('inp-target').value=data.target||'';
+  document.getElementById('inp-posisi').value=data.posisi||'';
+  calculate(); renderCalendar();
+  if (data.lastUpdate) {
+    const d=new Date(data.lastUpdate);
+    const mn=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    document.getElementById('last-update').textContent=d.getDate()+' '+mn[d.getMonth()]+' '+d.getFullYear()+', '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  }
+}
+
+setInterval(()=>{ if(document.getElementById('app').style.display!=='none') calculate(); },60000);
+</script>
+</body>
+</html>
